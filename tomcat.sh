@@ -32,11 +32,18 @@ wget https://dlcdn.apache.org/tomcat/tomcat-11/v${VERSION}/bin/apache-tomcat-${V
 # Extract
 tar -zxvf apache-tomcat-${VERSION}.tar.gz
 
-# Configure tomcat-users.xml (safe method, no hardcoded line numbers)
+# Configure tomcat-users.xml safely
 sed -i 's|</tomcat-users>|<role rolename="manager-gui"/>\n<role rolename="manager-script"/>\n<user username="tomcat" password="root123456" roles="manager-gui,manager-script"/>\n</tomcat-users>|' apache-tomcat-${VERSION}/conf/tomcat-users.xml
 
-# Remove IP restriction for manager app
-sed -i '/allow="127\./d' apache-tomcat-${VERSION}/webapps/manager/META-INF/context.xml
+# Fix context.xml - rewrite completely without IP restriction
+cat > apache-tomcat-${VERSION}/webapps/manager/META-INF/context.xml << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<Context antiResourceLocking="false" privileged="true" ignoreAnnotations="true">
+  <CookieProcessor className="org.apache.tomcat.util.http.Rfc6265CookieProcessor"
+                   sameSiteCookies="strict" />
+  <Manager sessionAttributeValueClassNameFilter="java\.lang\.(?:Boolean|Integer|Long|Number|String)|org\.apache\.catalina\.filters\.CsrfPreventionFilter\$LruCache(?:\$1)?|java\.util\.(?:Linked)?HashMap"/>
+</Context>
+EOF
 
 # Start Tomcat
 sh apache-tomcat-${VERSION}/bin/startup.sh
